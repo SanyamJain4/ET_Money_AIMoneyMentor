@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../api';
 import {
   Card, Badge, PrimaryButton, SectionTitle,
   FormRow, FormField, DemoButton, ScoreRing, StatusDot, fmt,
+  apiError, Disclaimer, HowToUse, Glossary, Notice,
 } from '../components/UI';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, Tooltip } from 'recharts';
 
@@ -36,7 +37,8 @@ export default function HealthScore() {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   async function submit() {
-    if (!form.monthly_income) { setError('Please enter your monthly income.'); return; }
+    if (!(n(form.monthly_income) > 0)) { setError('Please enter your monthly income.'); return; }
+    if (Object.values(form).some(v => typeof v !== 'boolean' && Number(v) < 0)) { setError('Amounts cannot be negative.'); return; }
     setError(''); setLoading(true); setResult(null);
     try {
       const payload = {
@@ -51,10 +53,10 @@ export default function HealthScore() {
         has_retirement_savings: form.has_retirement_savings,
         age: n(form.age),
       };
-      const { data } = await axios.post('/health-score', payload);
+      const { data } = await api.post('/health-score', payload);
       setResult(data);
     } catch (e) {
-      setError(e.response?.data?.detail || 'Something went wrong. Is the backend running?');
+      setError(apiError(e));
     }
     setLoading(false);
   }
@@ -68,6 +70,17 @@ export default function HealthScore() {
         </p>
       </div>
 
+      {!result && (
+        <HowToUse id="health" title="How to use the Money Health Score"
+          steps={[
+            'Click "Load demo data" to see an example, or enter your monthly figures.',
+            'Fill income and expenses first. Everything else makes the score more accurate.',
+            'Press "Calculate" to get a score out of 100 across six areas of your finances.',
+            'Follow the 3-month plan, it starts with the area that needs the most help.',
+          ]}
+          note="Scores are rule-based and repeatable: the same answers always give the same score." />
+      )}
+
       {!result ? (
         <Card>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -76,18 +89,18 @@ export default function HealthScore() {
           </div>
 
           <FormRow>
-            <FormField label="Monthly income (₹)">
+            <FormField label="Monthly income (₹)" hint="Take-home pay per month.">
               <input type="number" placeholder="100000" value={form.monthly_income}
                 onChange={e => set('monthly_income', e.target.value)} />
             </FormField>
-            <FormField label="Monthly expenses (₹)">
+            <FormField label="Monthly expenses (₹)" hint="Rent, food, bills, travel, shopping, not EMIs.">
               <input type="number" placeholder="55000" value={form.monthly_expenses}
                 onChange={e => set('monthly_expenses', e.target.value)} />
             </FormField>
           </FormRow>
 
           <FormRow>
-            <FormField label="Monthly EMI total (₹)">
+            <FormField label="Monthly EMI total (₹)" hint="All loan repayments combined. Leave blank if none.">
               <input type="number" placeholder="Home + car + personal loans" value={form.monthly_emi}
                 onChange={e => set('monthly_emi', e.target.value)} />
             </FormField>
@@ -98,22 +111,22 @@ export default function HealthScore() {
           </FormRow>
 
           <FormRow>
-            <FormField label="Emergency fund (₹)">
+            <FormField label="Emergency fund (₹)" hint="Savings account + liquid funds you can use immediately.">
               <input type="number" placeholder="Savings account balance" value={form.emergency_fund}
                 onChange={e => set('emergency_fund', e.target.value)} />
             </FormField>
-            <FormField label="Total investments (₹)">
+            <FormField label="Total investments (₹)" hint="Current value of mutual funds, stocks, FDs, PPF, etc.">
               <input type="number" placeholder="MF + stocks + FD + PPF" value={form.total_investments}
                 onChange={e => set('total_investments', e.target.value)} />
             </FormField>
           </FormRow>
 
           <FormRow>
-            <FormField label="Health insurance cover (₹)">
+            <FormField label="Health insurance cover (₹)" hint="Sum insured across personal and family policies. Do not count employer-only cover if you may switch jobs.">
               <input type="number" placeholder="e.g. 500000" value={form.health_insurance_cover}
                 onChange={e => set('health_insurance_cover', e.target.value)} />
             </FormField>
-            <FormField label="Term insurance cover (₹)">
+            <FormField label="Term insurance cover (₹)" hint="Sum assured of pure term life policies.">
               <input type="number" placeholder="e.g. 10000000" value={form.term_cover}
                 onChange={e => set('term_cover', e.target.value)} />
             </FormField>
@@ -149,6 +162,13 @@ export default function HealthScore() {
       ) : (
         <HealthResults result={result} onReset={() => setResult(null)} />
       )}
+      <Glossary items={[
+        ['Emergency fund', 'Money you can reach quickly (savings, liquid funds). Aim for 6 months of expenses.'],
+        ['Term insurance', 'Pure life cover that pays your family if you die. Aim for about 10× your yearly income.'],
+        ['Savings rate', 'The share of income left after expenses and EMIs. 20% or more is healthy.'],
+        ['EMI', 'Monthly loan repayment. Keep total EMIs under 20% of income.'],
+        ['EPF / NPS / PPF', 'Government-backed retirement savings schemes.'],
+      ]} />
     </div>
   );
 }
@@ -284,6 +304,7 @@ function HealthResults({ result, onReset }) {
           color: '#6b7280', padding: '10px', borderRadius: 10, fontSize: 13,
         }}
       >Recalculate with different numbers</button>
+      <Disclaimer text={result.disclaimer} />
     </div>
   );
 }

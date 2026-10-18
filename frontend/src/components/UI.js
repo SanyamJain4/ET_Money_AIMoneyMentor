@@ -65,7 +65,7 @@ export function PrimaryButton({ children, onClick, loading, disabled, style = {}
         opacity: disabled ? 0.7 : 1,
         ...style,
       }}
-    >{loading ? 'Analysing...' : children}</button>
+    >{loading ? 'Analysing… (first request can take ~30s on free hosting)' : children}</button>
   );
 }
 
@@ -79,17 +79,18 @@ export function SectionTitle({ children }) {
 
 export function FormRow({ children }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+    <div className="form-row" style={{ marginBottom: 16 }}>
       {children}
     </div>
   );
 }
 
-export function FormField({ label, children }) {
+export function FormField({ label, hint, children }) {
   return (
     <div>
       <label>{label}</label>
       {children}
+      {hint && <div className="hint">{hint}</div>}
     </div>
   );
 }
@@ -153,4 +154,67 @@ export function StatusDot({ status }) {
 export function fmt(n) {
   if (!n && n !== 0) return '—';
   return '₹' + Math.round(n).toLocaleString('en-IN');
+}
+
+// Turn an axios error into a safe, human-readable string.
+export function apiError(e) {
+  if (e.response?.status === 429) return 'Too many requests. Please wait a minute and try again.';
+  const d = e.response?.data?.detail;
+  if (Array.isArray(d)) return d.map(x => `${(x.loc || []).slice(1).join('.')}: ${x.msg}`).join('; ');
+  if (typeof d === 'string') return d;
+  if (e.code === 'ECONNABORTED') return 'The request timed out. Please try again.';
+  return 'Could not reach the server. Is the backend running?';
+}
+
+export function Disclaimer({ text }) {
+  return (
+    <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', lineHeight: 1.6 }}>
+      {text || 'Educational estimates only, not tax or investment advice.'}
+    </p>
+  );
+}
+
+// Collapsible "how to use" guide. Open on first visit; remembers being closed.
+export function HowToUse({ id, title, steps, note }) {
+  const key = `howto-${id}`;
+  const [open, setOpen] = React.useState(() => {
+    try { return localStorage.getItem(key) !== 'closed'; } catch (e) { return true; }
+  });
+  function toggle() {
+    const next = !open;
+    setOpen(next);
+    try { localStorage.setItem(key, next ? 'open' : 'closed'); } catch (e) { /* storage unavailable */ }
+  }
+  return (
+    <div className="howto">
+      <button className="howto-head" onClick={toggle} aria-expanded={open}>
+        <span>💡 {title}</span><span>{open ? 'Hide' : 'Show'}</span>
+      </button>
+      {open && (
+        <div className="howto-body">
+          <ol>{steps.map((st, i) => <li key={i}>{st}</li>)}</ol>
+          {note && <p className="howto-note">{note}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Plain-language glossary of the jargon used on the page.
+export function Glossary({ items }) {
+  return (
+    <details className="glossary">
+      <summary>What do these terms mean?</summary>
+      <dl>
+        {items.map(([term, def]) => (
+          <div key={term}><dt>{term}</dt><dd>{def}</dd></div>
+        ))}
+      </dl>
+    </details>
+  );
+}
+
+export function Notice({ children, type = 'info' }) {
+  const c = { info: ['#eff6ff', '#1e40af'], warn: ['#fffbeb', '#92400e'] }[type];
+  return <div style={{ background: c[0], color: c[1], padding: '10px 14px', borderRadius: 8, fontSize: 13, lineHeight: 1.6 }}>{children}</div>;
 }
