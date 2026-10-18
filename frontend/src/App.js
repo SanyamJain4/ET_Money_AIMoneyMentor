@@ -13,7 +13,7 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', background: '#f7f8fa' }}>
       {/* Header */}
-      <div style={{
+      <div className="app-header" style={{
         background: '#fff',
         borderBottom: '1px solid #e5e7eb',
         padding: '0 24px',
@@ -52,13 +52,13 @@ export default function App() {
           ))}
         </nav>
 
-        <div style={{ marginLeft: 'auto', fontSize: 12, color: '#9ca3af' }}>
+        <div className="tagline" style={{ marginLeft: 'auto', fontSize: 12, color: '#9ca3af' }}>
           ET AI Hackathon 2026 · PS9
         </div>
       </div>
 
       {/* Page */}
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 20px' }}>
+      <div className="page" style={{ maxWidth: 860, margin: '0 auto', padding: '32px 20px' }}>
         {page === 'tax' ? <TaxWizard /> : <HealthScore />}
       </div>
     </div>
